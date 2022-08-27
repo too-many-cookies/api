@@ -1,0 +1,24 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "Front end image base for Operational Analysis project.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/too-many-cookies/api.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/too-many-cookies/api/issues"
+  },
+  "homepage": "https://github.com/too-many-cookies/api#readme",
+  "dependencies": {
+    "express": "^4.18.1"
+  }
+}
