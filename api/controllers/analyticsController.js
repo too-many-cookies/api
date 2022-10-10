@@ -1,6 +1,59 @@
 const { response } = require("express");
 const conn = require("../models/db.js");
 
+const format_date = (date) => {
+  return date.toISOString().split('T')[0]
+}
+
+// Helper function to parse log information
+const format_log_response = (result) => {
+  let resp = {
+    totals: {
+      successful: 0,
+      failed: 0
+    },
+    days: [],
+    recent: []
+  }
+
+  let loggedDays = []
+  let daySuccesses = []
+  let dayFailures = []
+
+  result.forEach(item => {
+    resp.recent.push(item)
+    if (loggedDays.indexOf(format_date(item.timestamp)) === -1) {
+      loggedDays.push(format_date(item.timestamp))
+      daySuccesses.push(0)
+      dayFailures.push(0)
+    }
+    if (item.successful == 'Y') {
+      resp.totals.successful++
+      daySuccesses[loggedDays.indexOf(format_date(item.timestamp))]++
+    }
+    if (item.successful == 'N') {
+      resp.totals.failed++
+      dayFailures[loggedDays.indexOf(format_date(item.timestamp))]++
+    }
+
+    // dayTotals[loggedDays.indexOf(format_date(item.timestamp))]++
+  })
+
+  loggedDays.forEach(item => {
+    resp.days.push({day: item, succesful: 0, failed: 0})
+  })
+
+  daySuccesses.forEach((item, index) => {
+    resp.days[index].succesful = item
+  })
+
+  dayFailures.forEach((item, index) => {
+    resp.days[index].failed = item
+  })
+
+  return resp
+}
+
 // Helper function to get all professor's students
 const get_all_student_ids = (professorID) => {
   // Making this a promise allows the queries to be run asyncronously
@@ -102,7 +155,7 @@ exports.get_logins = (req, res) => {
   get_all_student_ids(professorID)
     .then(ids => {
       const idArr = ids.map(id => id.student_id)
-      let query = "SELECT logs.successful, student_info.student_id FROM logs JOIN student_info USING(username) WHERE (logs.timestamp = ?"
+      let query = "SELECT logs.log_id, logs.username, logs.successful, student_info.student_id, logs.timestamp FROM logs JOIN student_info USING(username) WHERE (logs.timestamp = ?"
       if (dates.length > 1) {
         dates.reduce(() => {
           query += " OR logs.timestamp = ?"
@@ -123,41 +176,58 @@ exports.get_logins = (req, res) => {
         if (err) {
           return res.send({error: err})
         }
-
-        let resp = {
-          successful: 0,
-          failed: 0
-        }
-
-        result.forEach(item => {
-          if (item.successful == 'Y') resp.successful++
-          if (item.successful == 'N') resp.failed++
-        })
+        const resp = format_log_response(result)
         res.send({message: resp})
       })
     })
     .catch(err => res.send({error: err}))
 };
 
-exports.get_recent_logs = (req, res) => {
-  const professorID = req.body.professorID
-  get_all_student_ids(professorID)
-    .then(ids => res.send({message: ids}))
-    .catch(err => res.send({error: err}))
-
-  // Need to implement getting the logins
-};
-
 exports.get_logins_by_class = (req, res) => {
-  const days = req.body.days
   const classID = req.params.classID
+  const dates = req.body.dates ? req.body.dates : [
+    new Date(Date.now()).toISOString().split('T')[0],
+    new Date(Date.now() - 86400000).toISOString().split('T')[0],
+    new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
+    new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0],
+    new Date(Date.now() - 86400000 * 4).toISOString().split('T')[0]
+  ]
   const query1 = "SELECT student_class_info.student_id FROM student_class_info WHERE student_class_info.class_id = ?;"
-
-  conn.query(query1, classID, function(err, result) {
-    if (err) {
-      return res.send({error: err})
+  
+  // First query gets the student list for the class
+  conn.query(query1, classID, function(err1, result1) {
+    if (err1) {
+      return res.send({error: err1})
+    }
+    if (!result1 || result1.length === 0) {
+      return res.send({error: "No students found."})
     }
 
-    res.send({message: result})
+    const students = result1.map(st => st.student_id)
+    let query2 = "SELECT logs.successful, logs.username, logs.timestamp FROM logs JOIN student_info USING(username) WHERE (logs.timestamp = ?"
+    if (dates.length > 1) {
+      dates.reduce(() => {
+        query2 += " OR logs.timestamp = ?"
+      })
+    }
+
+    query2 += ") AND (student_info.student_id = ?"
+
+    if (students.length > 1) {
+      students.reduce(() => {
+        query2 += " OR student_info.student_id = ?"
+      })
+    }
+
+    query2 += ");"
+    conn.query(query2, [...dates, ...students], function(err2, result2) {
+      if (err2) {
+        return res.send({error: err2})
+      }
+
+      const resp = format_log_response(result2)
+      
+      res.send({message: resp})
+    })
   })
 }

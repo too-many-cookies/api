@@ -6,9 +6,6 @@ module.exports = (app) => {
   router.get("/healthz", analytics_controller.health_check);
 
   router.get("/logins", analytics_controller.get_logins);
-  // router.get("/logins/failure", analytics_controller.get_failed_logins);
-  router.get("/logins/recent", analytics_controller.get_recent_logs);
-
   router.get("/logins/:classID", analytics_controller.get_logins_by_class)
 
   router.get("/classes", analytics_controller.get_classes);
