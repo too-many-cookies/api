@@ -1,3 +1,4 @@
+const { response } = require("express");
 const conn = require("../models/db.js");
 
 // Helper function to get all professor's students
@@ -11,7 +12,7 @@ const get_all_student_ids = (professorID) => {
       if (err1) {
         reject(err1)
       }
-      if (result1.length === 0) {
+      if (!result1) {
         reject("No active classes")
       }
   
@@ -20,7 +21,7 @@ const get_all_student_ids = (professorID) => {
   
       // If the classes list contains more than one class, add another or clause to the query
       if (classIds.length > 1) {
-        query2 = result1.reduce(() => {
+        result1.reduce(() => {
           query2 += "or student_class_info.class_id = ?"
         })
       }
@@ -57,7 +58,7 @@ exports.get_class = (req, res) => {
       return res.send({error: err})
     } 
     if (result.length === 0) {
-      return res.send({error: 404})
+      return res.status(404).send({error: "No classes found."})
     }
     res.send({message: result[0]})
   })
@@ -66,7 +67,7 @@ exports.get_class = (req, res) => {
 exports.get_classes = (req, res) => {
   const professorID = req.body.professorID
   if (!professorID) {
-    return res.send({error: 400})
+    return res.status(400).send({error: "No ID found in request."})
   }
   const sql = "SELECT class_info.class_id, class_info.name, class_info.class_code, class_info.class_section_number, class_info.student_signin_count, class_info.total_student_count FROM class_info JOIN professor_class_instance USING(class_id) WHERE professor_class_instance.professor_id = ? AND professor_class_instance.active = 'A';"
   conn.query(sql, professorID, function(err, result) {
@@ -74,7 +75,7 @@ exports.get_classes = (req, res) => {
       return res.send({error: err})
     } 
     if (result.length === 0) {
-      return res.send({error: 404})
+      return res.status(404).send({error: "No classes found."})
     }
     res.send({message: result})
   })
@@ -85,26 +86,58 @@ exports.test_api = (req, res) => {
 };
 
 exports.health_check = (req, res) => {
-  res.send({ message: "Not implemented" });
+  res.status(200).send({message: 'OK'});
 };
 
 exports.get_logins = (req, res) => {
   const professorID = req.body.professorID;
+  const dates = req.body.dates ? req.body.dates : [
+    new Date(Date.now()).toISOString().split('T')[0],
+    new Date(Date.now() - 86400000).toISOString().split('T')[0],
+    new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
+    new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0],
+    new Date(Date.now() - 86400000 * 4).toISOString().split('T')[0]
+  ]
+
   get_all_student_ids(professorID)
-    .then(ids => res.send({message: ids}))
+    .then(ids => {
+      const idArr = ids.map(id => id.student_id)
+      let query = "SELECT logs.successful, student_info.student_id FROM logs JOIN student_info USING(username) WHERE (logs.timestamp = ?"
+      if (dates.length > 1) {
+        dates.reduce(() => {
+          query += " OR logs.timestamp = ?"
+        })
+      }
+
+      query += ") AND (student_info.student_id = ?"
+
+      if (idArr.length > 1) {
+        idArr.reduce(() => {
+          query += " OR student_info.student_id = ?"
+        })
+      }
+
+      query += ");"
+
+      conn.query(query, [...dates, ...idArr], function(err, result) {
+        if (err) {
+          return res.send({error: err})
+        }
+
+        let resp = {
+          successful: 0,
+          failed: 0
+        }
+
+        result.forEach(item => {
+          if (item.successful == 'Y') resp.successful++
+          if (item.successful == 'N') resp.failed++
+        })
+        res.send({message: resp})
+      })
+    })
     .catch(err => res.send({error: err}))
-  
-  // Need to implement getting the logins
 };
-
-// exports.get_failed_logins = (req, res) => {
-//   const professorID = req.body.professorID;
-//   get_all_student_ids(professorID)
-//     .then(ids => res.send({message: ids}))
-//     .catch(err => res.send({error: err}))
-
-//   // Need to implement getting the logins
-// };
 
 exports.get_recent_logs = (req, res) => {
   const professorID = req.body.professorID
@@ -118,9 +151,9 @@ exports.get_recent_logs = (req, res) => {
 exports.get_logins_by_class = (req, res) => {
   const days = req.body.days
   const classID = req.params.classID
-  const sql = "SELECT student_class_info.student_id FROM student_class_info WHERE student_class_info.class_id = ?;"
+  const query1 = "SELECT student_class_info.student_id FROM student_class_info WHERE student_class_info.class_id = ?;"
 
-  conn.query(sql, classID, function(err, result) {
+  conn.query(query1, classID, function(err, result) {
     if (err) {
       return res.send({error: err})
     }
