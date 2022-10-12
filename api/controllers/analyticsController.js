@@ -100,7 +100,7 @@ exports.login = (req, res) => {
   const password = req.body.password;
 
   const sql =
-    "SELECT username, password FROM professor_info WHERE username = ?";
+    "SELECT professor_id, username, password FROM professor_info WHERE username = ?";
   conn.query(sql, username, function (err, result) {
     if (err) {
       return res.send({ error: err });
@@ -120,7 +120,7 @@ exports.login = (req, res) => {
     res.send({
       message: {
         user: username,
-        login: true,
+        userId: user.professor_id,
       },
     });
   });
