@@ -129,7 +129,7 @@ exports.login = (req, res) => {
 exports.get_students_by_class = (req, res) => {
   const classID = req.params.classID;
   const sql =
-    "SELECT student_info.name, student_info.username, student_info.password_changed, student_info.last_sign_in FROM student_info JOIN student_class_info USING(student_id) WHERE student_class_info.class_id = ? ORDER BY name DESC;";
+    "SELECT student_info.name, student_info.username FROM student_info JOIN student_class_info USING(student_id) WHERE student_class_info.class_id = ? ORDER BY name DESC;";
   conn.query(sql, classID, function (err, result) {
     if (err) res.send({ error: err });
     res.send({ message: result });
