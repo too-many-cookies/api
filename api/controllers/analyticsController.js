@@ -67,7 +67,7 @@ const get_all_student_ids = (professorID) => {
         reject(err1);
       }
       if (!result1) {
-        reject("No active classes");
+        reject("No active classes.");
       }
 
       const classIds = result1;
@@ -87,7 +87,7 @@ const get_all_student_ids = (professorID) => {
           reject(err2);
         }
         if (!result2) {
-          reject("No students found");
+          reject("No students found.");
         }
         resolve(result2);
       });
@@ -95,10 +95,41 @@ const get_all_student_ids = (professorID) => {
   });
 };
 
+exports.login = (req, res) => {
+  const username = req.body.username;
+  const password = req.body.password;
+
+  const sql =
+    "SELECT professor_id, username, password FROM professor_info WHERE username = ?";
+  conn.query(sql, username, function (err, result) {
+    if (err) {
+      return res.send({ error: err });
+    }
+
+    const user = result[0];
+    if (!user) {
+      return res.send({ error: "Username not found." });
+    }
+    if (!user.password) {
+      return res.send({ error: "User not initialized." });
+    }
+    if (password !== user.password) {
+      return res.send({ error: "Incorrect password." });
+    }
+
+    res.send({
+      message: {
+        user: username,
+        userId: user.professor_id,
+      },
+    });
+  });
+};
+
 exports.get_students_by_class = (req, res) => {
   const classID = req.params.classID;
   const sql =
-    "SELECT student_info.name, student_info.username, student_info.password_changed, student_info.last_sign_in FROM student_info JOIN student_class_info USING(student_id) WHERE student_class_info.class_id = ? ORDER BY name DESC;";
+    "SELECT student_info.name, student_info.username FROM student_info JOIN student_class_info USING(student_id) WHERE student_class_info.class_id = ? ORDER BY name DESC;";
   conn.query(sql, classID, function (err, result) {
     if (err) res.send({ error: err });
     res.send({ message: result });
@@ -138,6 +169,10 @@ exports.get_classes = (req, res) => {
     }
     res.send({ message: result });
   });
+};
+
+exports.test_api = (req, res) => {
+  res.send({ message: "Controller test passed." });
 };
 
 exports.health_check = (req, res) => {
