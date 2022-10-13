@@ -70,17 +70,18 @@ const get_all_student_ids = (professorID) => {
         reject("No active classes.");
       }
 
-      const classIds = result1;
+      const classIds = result1.map((item) => item.class_id);
       let query2 =
-        "SELECT DISTINCT student_class_info.student_id FROM student_class_info WHERE student_class_info.class_id = ?;";
+        "SELECT DISTINCT student_class_info.student_id FROM student_class_info WHERE student_class_info.class_id = ?";
 
       // If the classes list contains more than one class, add another or clause to the query
       if (classIds.length > 1) {
         result1.reduce(() => {
-          query2 += "or student_class_info.class_id = ?";
+          query2 += " or student_class_info.class_id = ?";
         });
       }
 
+      query2 += ";";
       // The second query returns an array of unique student id's in all of the professor's classes
       conn.query(query2, classIds, function (err2, result2) {
         if (err2) {
@@ -180,6 +181,7 @@ exports.health_check = (req, res) => {
 };
 
 exports.get_logins = (req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");
   const professorID = req.body.professorID;
   const dates = req.body.dates
     ? req.body.dates
