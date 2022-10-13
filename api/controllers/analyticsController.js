@@ -66,7 +66,7 @@ const get_all_student_ids = (professorID) => {
       if (err1) {
         reject(err1);
       }
-      if (!result1) {
+      if (!result1 || result1.length === 0) {
         reject("No active classes.");
       }
 
