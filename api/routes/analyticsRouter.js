@@ -5,8 +5,10 @@ module.exports = (app) => {
   router.get("/test", analytics_controller.test_api);
   router.get("/healthz", analytics_controller.health_check);
 
+  router.get("/login", analytics_controller.login);
+
   router.get("/logins", analytics_controller.get_logins);
-  router.get("/logins/:classID", analytics_controller.get_logins_by_class)
+  router.get("/logins/:classID", analytics_controller.get_logins_by_class);
 
   router.get("/classes", analytics_controller.get_classes);
   router.get("/classes/:classID", analytics_controller.get_class);
