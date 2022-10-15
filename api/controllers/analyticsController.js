@@ -155,13 +155,10 @@ exports.get_students_by_class = (req, res) => {
 
     sql2 += ") GROUP BY student_info.username;";
 
-    console.log(sql2);
-    console.log(usernames);
     conn.query(sql2, usernames, function (err2, result2) {
       if (err2) {
         return res.send({ error: err2 });
       }
-      console.log(result2);
 
       const finalResult = result.map((student) => {
         const instantiated =
