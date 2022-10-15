@@ -135,9 +135,43 @@ exports.get_students_by_class = (req, res) => {
     if (err) {
       return res.send({ error: err });
     }
+    if (!result || result.length === 0) {
+      return res.send({
+        error: `No students found in class with ID:${classID}`,
+      });
+    }
 
-    const sql2 = "SELECT";
-    res.send({ message: result });
+    const usernames = result.map((user) => {
+      return user.username;
+    });
+
+    let sql2 =
+      "SELECT COUNT(logs.username) as 'num_logins', student_info.username FROM student_info LEFT JOIN logs USING(username) WHERE username IN (?";
+    if (result.length > 1) {
+      result.reduce(() => {
+        sql2 += ", ?";
+      });
+    }
+
+    sql2 += ") GROUP BY student_info.username;";
+
+    console.log(sql2);
+    console.log(usernames);
+    conn.query(sql2, usernames, function (err2, result2) {
+      if (err2) {
+        return res.send({ error: err2 });
+      }
+      console.log(result2);
+
+      const finalResult = result.map((student) => {
+        const instantiated =
+          result2.find((item) => item.username === student.username)
+            .num_logins > 0;
+
+        return { ...student, instantiated };
+      });
+      res.send({ message: finalResult });
+    });
   });
 };
 
