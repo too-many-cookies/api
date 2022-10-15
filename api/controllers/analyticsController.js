@@ -135,6 +135,8 @@ exports.get_students_by_class = (req, res) => {
     if (err) {
       return res.send({ error: err });
     }
+
+    const sql2 = "SELECT";
     res.send({ message: result });
   });
 };
@@ -143,7 +145,7 @@ exports.get_class = (req, res) => {
   const classID = req.params.classID;
   const professorID = req.body.professorID;
   const sql =
-    "SELECT class_info.class_id, class_info.name, class_info.class_code, class_info.class_section_number, class_info.student_signin_count, class_info.total_student_count FROM class_info JOIN professor_class_instance USING(class_id) WHERE professor_class_instance.professor_id = ? AND professor_class_instance.active = 'A'  AND class_info.class_id = ? LIMIT 0, 1;";
+    "SELECT class_info.class_id, class_info.name, class_info.class_code, class_info.class_section_number, class_info.student_signin_count FROM class_info JOIN professor_class_instance USING(class_id) WHERE professor_class_instance.professor_id = ? AND professor_class_instance.active = 'A'  AND class_info.class_id = ? LIMIT 0, 1;";
 
   conn.query(sql, [professorID, classID], function (err, result) {
     if (err) {
@@ -152,6 +154,7 @@ exports.get_class = (req, res) => {
     if (result.length === 0) {
       return res.status(404).send({ error: "No classes found." });
     }
+
     res.send({ message: result[0] });
   });
 };
@@ -162,7 +165,7 @@ exports.get_classes = (req, res) => {
     return res.status(400).send({ error: "No ID found in request." });
   }
   const sql =
-    "SELECT class_info.class_id, class_info.name, class_info.class_code, class_info.class_section_number, class_info.student_signin_count, class_info.total_student_count FROM class_info JOIN professor_class_instance USING(class_id) WHERE professor_class_instance.professor_id = ? AND professor_class_instance.active = 'A';";
+    "SELECT COUNT(student_class_info.student_id) AS 'total_student_count', class_info.class_id, class_info.name, class_info.class_code, class_info.class_section_number, class_info.student_signin_count FROM class_info JOIN professor_class_instance USING(class_id) JOIN student_class_info USING(class_id) WHERE professor_class_instance.professor_id = ? AND professor_class_instance.active = 'A' GROUP BY student_class_info.class_id;";
   conn.query(sql, professorID, function (err, result) {
     if (err) {
       return res.send({ error: err });
