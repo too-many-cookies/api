@@ -36,8 +36,7 @@ const format_log_response = (result) => {
       dayFailures[loggedDays.indexOf(format_date(item.timestamp))]++;
     }
 
-    // dayTotals[loggedDays.indexOf(format_date(item.timestamp))]++
-  });
+  })
 
   loggedDays.forEach((item) => {
     resp.days.push({ day: item, succesful: 0, failed: 0 });
@@ -54,47 +53,6 @@ const format_log_response = (result) => {
   return resp;
 };
 
-// Helper function to get all professor's students
-const get_all_student_ids = (professorID) => {
-  // Making this a promise allows the queries to be run asyncronously
-  return new Promise((resolve, reject) => {
-    const query1 =
-      "SELECT professor_class_instance.class_id FROM professor_class_instance WHERE professor_class_instance.professor_id = ? AND professor_class_instance.active = 'A';";
-
-    // First query gets a list of the professor's classes
-    conn.query(query1, professorID, function (err1, result1) {
-      if (err1) {
-        reject(err1);
-      }
-      if (!result1 || result1.length === 0) {
-        reject("No active classes.");
-      }
-
-      const classIds = result1.map((item) => item.class_id);
-      let query2 =
-        "SELECT DISTINCT student_class_info.student_id FROM student_class_info WHERE student_class_info.class_id = ?";
-
-      // If the classes list contains more than one class, add another or clause to the query
-      if (classIds.length > 1) {
-        result1.reduce(() => {
-          query2 += " or student_class_info.class_id = ?";
-        });
-      }
-
-      query2 += ";";
-      // The second query returns an array of unique student id's in all of the professor's classes
-      conn.query(query2, classIds, function (err2, result2) {
-        if (err2) {
-          reject(err2);
-        }
-        if (!result2) {
-          reject("No students found.");
-        }
-        resolve(result2);
-      });
-    });
-  });
-};
 
 exports.login = (req, res) => {
   const username = req.body.username;
@@ -147,7 +105,7 @@ exports.get_students_by_class = (req, res) => {
     });
 
     let sql2 =
-      "SELECT COUNT(logs.username) as 'num_logins', student_info.username FROM student_info LEFT JOIN logs USING(username) WHERE username IN (?";
+      "SELECT COUNT(logs.username) as 'num_logins', (SELECT MAX(timestamp) FROM logs WHERE logs.username = student_info.username) AS 'last_sign_in', student_info.username FROM student_info LEFT JOIN logs USING(username) WHERE username IN (?";
     if (result.length > 1) {
       result.reduce(() => {
         sql2 += ", ?";
