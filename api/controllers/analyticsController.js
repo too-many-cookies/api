@@ -35,8 +35,7 @@ const format_log_response = (result) => {
       resp.totals.failed++;
       dayFailures[loggedDays.indexOf(format_date(item.timestamp))]++;
     }
-
-  })
+  });
 
   loggedDays.forEach((item) => {
     resp.days.push({ day: item, succesful: 0, failed: 0 });
@@ -52,7 +51,6 @@ const format_log_response = (result) => {
 
   return resp;
 };
-
 
 exports.login = (req, res) => {
   const username = req.body.username;
@@ -123,7 +121,9 @@ exports.get_students_by_class = (req, res) => {
         const instantiated =
           result2.find((item) => item.username === student.username)
             .num_logins > 0;
-        const last_sign_in = result2.find((item) => item.username === student.username).last_sign_in
+        const last_sign_in = result2.find(
+          (item) => item.username === student.username
+        ).last_sign_in;
         return { ...student, instantiated, last_sign_in };
       });
       res.send({ message: finalResult });
@@ -164,8 +164,9 @@ exports.get_classes = (req, res) => {
       return res.status(404).send({ error: "No classes found." });
     }
 
-    const sql2 = "SELECT COUNT(logs.username) AS 'logins', student_info.username, student_class_info.class_id FROM student_info LEFT JOIN logs USING(username) JOIN student_class_info USING(student_id) JOIN professor_class_instance USING (class_id) WHERE professor_id = ? GROUP BY student_info.username, student_class_info.class_id;";
-    conn.query(sql2, professorID, function(err2, result2) {
+    const sql2 =
+      "SELECT COUNT(logs.username) AS 'logins', student_info.username, student_class_info.class_id FROM student_info LEFT JOIN logs USING(username) JOIN student_class_info USING(student_id) JOIN professor_class_instance USING (class_id) WHERE professor_id = ? GROUP BY student_info.username, student_class_info.class_id;";
+    conn.query(sql2, professorID, function (err2, result2) {
       if (err2) {
         return res.send({ error: err2 });
       }
@@ -173,19 +174,19 @@ exports.get_classes = (req, res) => {
         return res.status(404).send({ error: "No classes found." });
       }
 
-      let finalResult = result.map(row => {
-        return {...row, students_instantiated: 0}
-      })
+      let finalResult = result.map((row) => {
+        return { ...row, students_instantiated: 0 };
+      });
 
-      result2.forEach(row => {
+      result2.forEach((row) => {
         if (row.logins > 0) {
-          finalResult.find(f => f.class_id === row.class_id).students_instantiated++
+          finalResult.find((f) => f.class_id === row.class_id)
+            .students_instantiated++;
         }
-      })
+      });
 
       res.send({ message: finalResult });
-
-    })
+    });
   });
 };
 
@@ -200,25 +201,26 @@ exports.health_check = (req, res) => {
 exports.get_logins = (req, res) => {
   const professorID = req.body.professorID;
   const dates = req.body.dates
-    ? req.body.dates.map(date => date + "00:00:00")
+    ? req.body.dates.map((date) => date + "00:00:00")
     : [
-        new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0] + " 00:00:00",
+        new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0] +
+          " 00:00:00",
         new Date(Date.now()).toISOString().split("T")[0] + " 00:00:00",
       ];
 
-  const query =
-  `SELECT logs.log_id,
-    logs.username, 
-    logs.successful, 
-    student_info.student_id, 
-    logs.timestamp 
-  FROM logs 
-    JOIN student_info USING(username) 
-    JOIN student_class_info USING(student_id) 
-    JOIN class_info USING(class_id) 
-    JOIN professor_class_instance USING (class_id) 
-  WHERE logs.timestamp BETWEEN ? AND ?
-    AND professor_id = ?;`;
+  const query = `SELECT DISTINCT logs.log_id,
+  logs.username,
+  logs.successful,
+  student_info.student_id,
+  student_info.name,
+  logs.timestamp
+FROM logs
+JOIN student_info USING (username)
+JOIN student_class_info USING (student_id)
+JOIN class_info USING (class_id)
+JOIN professor_class_instance USING (class_id)
+WHERE logs.timestamp BETWEEN ? AND ?
+AND professor_id = ?;`;
 
   conn.query(query, [...dates, professorID], function (err, result) {
     if (err) {
@@ -232,13 +234,13 @@ exports.get_logins = (req, res) => {
 exports.get_logins_by_class = (req, res) => {
   const classID = req.params.classID;
   const dates = req.body.dates
-    ? req.body.dates.map(date => date + "00:00:00")
+    ? req.body.dates.map((date) => date + "00:00:00")
     : [
-        new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0] + " 00:00:00",
+        new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0] +
+          " 00:00:00",
         new Date(Date.now()).toISOString().split("T")[0] + " 00:00:00",
       ];
-  const query1 =
-    `SELECT logs.log_id, 
+  const query1 = `SELECT logs.log_id, 
       logs.username, 
       logs.successful, 
       student_info.student_id, 
