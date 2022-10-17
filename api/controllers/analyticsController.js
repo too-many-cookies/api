@@ -206,7 +206,7 @@ exports.get_classes = (req, res) => {
       return res.status(404).send({ error: "No classes found." });
     }
 
-    const sql2 = "SELECT COUNT(logs.username) AS 'logins', student_info.username, student_class_info.class_id FROM student_info LEFT JOIN logs USING(username) JOIN student_class_info USING(student_id) JOIN professor_class_instance USING (class_id) WHERE professor_id = ? GROUP BY username;";
+    const sql2 = "SELECT COUNT(logs.username) AS 'logins', student_info.username, student_class_info.class_id FROM student_info LEFT JOIN logs USING(username) JOIN student_class_info USING(student_id) JOIN professor_class_instance USING (class_id) WHERE professor_id = ? GROUP BY student_info.username, student_class_info.class_id;";
     conn.query(sql2, professorID, function(err2, result2) {
       if (err2) {
         return res.send({ error: err2 });
