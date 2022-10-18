@@ -220,7 +220,8 @@ JOIN student_class_info USING (student_id)
 JOIN class_info USING (class_id)
 JOIN professor_class_instance USING (class_id)
 WHERE logs.timestamp BETWEEN ? AND ?
-AND professor_id = ?;`;
+AND professor_id = ?
+ORDER BY logs.timestamp DESC;`;
 
   conn.query(query, [...dates, professorID], function (err, result) {
     if (err) {
