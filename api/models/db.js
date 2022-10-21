@@ -12,9 +12,9 @@ const pool = mysql.createPool({
 });
 
 function keepAlive() {
-    pool.query('select 1')
+    pool.query('select 1');
 }
 
-setInterval(keepAlive, 900000) // Ping the database every 15 minutes
+setInterval(keepAlive, 900000); // Ping the database every 15 minutes
 
 module.exports = pool;
