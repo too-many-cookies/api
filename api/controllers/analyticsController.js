@@ -16,17 +16,18 @@ const format_log_response = (result) => {
     recent: [],
   };
 
-  let loggedDays = [];
-  let daySuccesses = [];
-  let dayFailures = [];
+  let loggedDays = [
+    new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0],
+    new Date(Date.now() - 86400000 * 3).toISOString().split("T")[0],
+    new Date(Date.now() - 86400000 * 2).toISOString().split("T")[0],
+    new Date(Date.now() - 86400000).toISOString().split("T")[0],
+    new Date(Date.now()).toISOString().split("T")[0],
+  ];
+  let daySuccesses = [0, 0, 0, 0, 0];
+  let dayFailures = [0, 0, 0, 0, 0];
 
   result.forEach((item) => {
     resp.recent.push(item);
-    if (loggedDays.indexOf(format_date(item.timestamp)) === -1) {
-      loggedDays.push(format_date(item.timestamp));
-      daySuccesses.push(0);
-      dayFailures.push(0);
-    }
     if (item.successful == "Y") {
       resp.totals.successful++;
       daySuccesses[loggedDays.indexOf(format_date(item.timestamp))]++;
@@ -37,12 +38,19 @@ const format_log_response = (result) => {
     }
   });
 
+  loggedDays.sort((a, b) => {
+    if (new Date(a) > new Date(b)) {
+      return 1;
+    }
+    return -1;
+  });
+
   loggedDays.forEach((item) => {
-    resp.days.push({ day: item, succesful: 0, failed: 0 });
+    resp.days.push({ day: item, successful: 0, failed: 0 });
   });
 
   daySuccesses.forEach((item, index) => {
-    resp.days[index].succesful = item;
+    resp.days[index].successful = item;
   });
 
   dayFailures.forEach((item, index) => {
@@ -205,7 +213,7 @@ exports.get_logins = (req, res) => {
     : [
         new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0] +
           " 00:00:00",
-        new Date(Date.now()).toISOString().split("T")[0] + " 00:00:00",
+        new Date(Date.now()).toISOString().split("T")[0] + " 23:59:59",
       ];
 
   const query = `SELECT DISTINCT logs.log_id,
