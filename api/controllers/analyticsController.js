@@ -247,7 +247,7 @@ exports.get_logins_by_class = (req, res) => {
     : [
         new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0] +
           " 00:00:00",
-        new Date(Date.now()).toISOString().split("T")[0] + " 00:00:00",
+        new Date(Date.now()).toISOString().split("T")[0] + " 23:59:59",
       ];
   const query1 = `SELECT logs.log_id, 
       logs.username, 
