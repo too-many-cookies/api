@@ -60,6 +60,65 @@ const format_log_response = (result) => {
   return resp;
 };
 
+const format_classes_logins = (result) => {
+  const loggedDays = [
+    new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0],
+    new Date(Date.now() - 86400000 * 3).toISOString().split("T")[0],
+    new Date(Date.now() - 86400000 * 2).toISOString().split("T")[0],
+    new Date(Date.now() - 86400000).toISOString().split("T")[0],
+    new Date(Date.now()).toISOString().split("T")[0],
+  ];
+  
+  let resp = [
+    {
+      classSection: "",
+      classId: -1,
+      days: [],
+    }
+  ]
+
+  result.forEach((item) => {
+    // First attempt to find the class section in the list
+    let existingClass = resp.find((c) => c.classId === item.class_id)
+    
+    // Create the class if it doesnt already exist
+    if (!existingClass) {
+      let newClass = {
+        classSection: `${item.class_code.replace("-", ".")}.${item.class_section_number}`,
+        classId: item.class_id,
+        days: []
+      }
+
+      // Seed the proper dates into the new class result
+      loggedDays.forEach((day) => {
+        newClass.days.push({ day: day, successful: 0, failed: 0 })
+      })
+
+      resp.push(newClass)
+      existingClass = resp.find((c) => c.classId === item.class_id)
+    }
+
+    if (item.successful === "Y") {
+      const foundDay = existingClass.days.find((day) => day.day == format_date(item.timestamp))
+      if (foundDay) {
+        foundDay.successful++
+      }
+    }
+
+    if (item.successful == "N") {
+      const foundDay = existingClass.days.find((day) => day.day == format_date(item.timestamp))
+      if (foundDay) {
+        foundDay.failed++
+      }
+    }
+  })
+
+  // remove the first dummy object
+  resp.shift()
+
+  return resp
+}
+
 exports.login = (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
@@ -183,14 +242,18 @@ exports.get_classes = (req, res) => {
       }
 
       let finalResult = result.map((row) => {
-        return { ...row, students_instantiated: 0 };
+        return { ...row,  students_instantiated: 0 };
       });
 
       result2.forEach((row) => {
-        if (row.logins > 0) {
-          finalResult.find((f) => f.class_id === row.class_id)
-            .students_instantiated++;
+        let finalRow = finalResult.find((f) => f.class_id === row.class_id)
+
+        if (row.logins > 0) {        
+          finalRow.students_instantiated++;
         }
+
+        finalRow.logins = row.logins
+        
       });
 
       res.send({ message: finalResult });
@@ -240,6 +303,7 @@ ORDER BY logs.timestamp DESC;`;
   });
 };
 
+// Returns the logins for individual classes
 exports.get_logins_by_class = (req, res) => {
   const classID = req.params.classID;
   const dates = req.body.dates
@@ -257,7 +321,7 @@ exports.get_logins_by_class = (req, res) => {
     FROM logs JOIN student_info USING(username) 
       JOIN student_class_info USING(student_id) 
     WHERE logs.timestamp BETWEEN ? AND ? AND class_id = ?;`;
-
+     
   pool.query(query1, [...dates, classID], function (err1, result1) {
     if (err1) {
       return res.send({ error: err1 });
@@ -271,3 +335,41 @@ exports.get_logins_by_class = (req, res) => {
     res.send({ message: resp });
   });
 };
+
+// Get all logins, separated by class (for classes page)
+exports.get_all_class_logins = (req, res) => {
+  const professorID = req.body.professorID;
+  const dates = [
+    new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0] +
+      " 00:00:00",
+    new Date(Date.now()).toISOString().split("T")[0] + " 23:59:59",
+  ]
+
+  const query = `SELECT logs.log_id,
+    logs.username,
+    logs.successful,
+    class_info.name,
+    class_info.class_id,
+    class_info.class_code,
+    class_info.class_section_number,
+    student_info.student_id,
+    student_info.name,
+    logs.timestamp
+    FROM logs
+    JOIN student_info USING (username)
+    JOIN student_class_info USING (student_id)
+    JOIN class_info USING (class_id)
+    JOIN professor_class_instance USING (class_id)
+    WHERE logs.timestamp BETWEEN ? AND ?
+    AND professor_id = ?
+    ORDER BY logs.timestamp DESC;`
+
+  pool.query(query, [...dates, professorID], function(err, result) {
+    if (err) {
+      return res.send({ error: err })
+    }
+
+    const resp = format_classes_logins(result)
+    res.send({ message: resp })
+  })
+}
