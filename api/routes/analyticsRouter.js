@@ -18,5 +18,7 @@ module.exports = (app) => {
   router.post("/feedback", analytics_controller.post_feedback);
   router.get("/feedback", analytics_controller.get_feedback);
 
+  router.post("/notifications", analytics_controller.get_notifications);
+
   app.use("/v1", router);
 };
