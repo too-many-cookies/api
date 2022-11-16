@@ -240,6 +240,38 @@ ORDER BY logs.timestamp DESC;`;
   });
 };
 
+exports.get_admin_logins = (req, res) => {
+  const dates = req.body.dates
+  ? req.body.dates.map((date) => date + "00:00:00")
+  : [
+      new Date(Date.now() - 86400000 * 4).toISOString().split("T")[0] +
+        " 00:00:00",
+      new Date(Date.now()).toISOString().split("T")[0] + " 23:59:59",
+    ];
+
+  const query = `SELECT DISTINCT logs.log_id,
+    logs.username,
+    logs.successful,
+    student_info.student_id,
+    student_info.name,
+    logs.timestamp
+    FROM logs
+    JOIN student_info USING (username)
+    JOIN student_class_info USING (student_id)
+    JOIN class_info USING (class_id)
+    JOIN professor_class_instance USING (class_id)
+    WHERE logs.timestamp BETWEEN ? AND ?
+    ORDER BY logs.timestamp DESC;`;
+
+  pool.query(query, [...dates], function (err, result) {
+    if (err) {
+      return res.send({ error: err });
+    }
+    const resp = format_log_response(result);
+    res.send({ message: resp });
+  });
+}
+
 exports.get_logins_by_class = (req, res) => {
   const classID = req.params.classID;
   const dates = req.body.dates
@@ -271,3 +303,31 @@ exports.get_logins_by_class = (req, res) => {
     res.send({ message: resp });
   });
 };
+
+
+// This requires the professor_feedback_id field to be auto incremented...
+exports.post_feedback = (req, res) => {
+  const professorID = req.body.professorID;
+  const feedback = req.body.feedback;
+  const date = new Date(Date.now());
+  const query = "INSERT INTO professor_feedback (professor_info_professor_id, feedback, timestamp) VALUES (?,?,?)";
+
+  pool.query(query, [professorID, feedback, date], function(err, result) {
+    if (err) {
+      return res.send({ error: err });
+    }
+    return res.send({ message: result })
+  })
+};
+
+exports.get_feedback = (req, res) => {
+  const query = "SELECT professor_id, name, feedback, timestamp FROM professor_feedback JOIN professor_info ON professor_info_professor_id = professor_id"
+
+  pool.query(query, function(err, result) {
+    if (err) {
+      return res.send({ error: err});
+    }
+
+    return res.send({ message: result });
+  })
+}
