@@ -124,7 +124,7 @@ exports.login = (req, res) => {
   const password = req.body.password;
 
   const sql =
-    "SELECT professor_id, username, password FROM professor_info WHERE username = ?";
+    "SELECT professor_id,username, password, admin, active FROM professor_info WHERE username = ?";
   pool.query(sql, username, function (err, result) {
     if (err) {
       return res.send({ error: err });
@@ -145,7 +145,9 @@ exports.login = (req, res) => {
       message: {
         user: username,
         userId: user.professor_id,
-      },
+        admin: user.admin,
+        active: user.active
+      },  
     });
   });
 };
