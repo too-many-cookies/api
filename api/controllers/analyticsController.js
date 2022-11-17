@@ -440,3 +440,30 @@ exports.get_feedback = (req, res) => {
     return res.send({ message: result });
   });
 };
+
+exports.get_notifications = (req, res) => {
+  const query = `SELECT DISTINCT signin_alerts.username,
+  signin_alerts.date,
+  signin_alerts.failed_count,
+  GROUP_CONCAT(REPLACE(class_code, '-', '.'), '.', class_section_number SEPARATOR ', ') AS sections,
+  signin_alerts.read_flag
+  FROM signin_alerts
+  JOIN student_info USING (username)
+  JOIN student_class_info USING (student_id)
+  JOIN class_info USING (class_id)
+  JOIN professor_class_instance USING (class_id)
+  WHERE professor_id = ?
+  GROUP BY signin_alerts.username, signin_alerts.date, signin_alerts.failed_count, signin_alerts.read_flag
+  ORDER BY signin_alerts.date;
+  `;
+
+  const values = [req.body.professorID];
+
+  pool.query(query, values, function (err, result) {
+    if (err) {
+      res.send({ error: err });
+    }
+
+    return res.send({ message: result });
+  });
+};
