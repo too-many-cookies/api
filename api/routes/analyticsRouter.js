@@ -13,6 +13,7 @@ module.exports = (app) => {
   router.post("/classes", analytics_controller.get_classes);
   router.post("/classes/logins", analytics_controller.get_all_class_logins);
   router.post("/classes/:classID", analytics_controller.get_class);
+  router.post("/admin/classes", analytics_controller.get_admin_classes);
 
   router.post("/students/:classID", analytics_controller.get_students_by_class);
 

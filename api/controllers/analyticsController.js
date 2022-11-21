@@ -224,6 +224,39 @@ exports.get_class = (req, res) => {
   });
 };
 
+exports.get_admin_classes = (req, res) => {
+  const sql =
+    "SELECT COUNT(student_class_info.student_id) AS 'total_student_count', class_info.class_id, class_info.name, class_info.class_code, class_info.class_section_number FROM class_info JOIN professor_class_instance USING(class_id) JOIN student_class_info USING(class_id) WHERE professor_class_instance.active = 'A' GROUP BY student_class_info.class_id;";
+  
+  pool.query(sql, [], function(err, result) {
+    if (err) {
+      return res.send({ error: err });
+    }
+    if (result.length === 0) {
+      return res.status(404).send({ error: "No classes found." });
+    }
+
+
+    const sql2 =
+      "SELECT COUNT(logs.username) AS 'logins', student_info.username, student_class_info.class_id FROM student_info LEFT JOIN logs USING(username) JOIN student_class_info USING(student_id) JOIN professor_class_instance USING (class_id) GROUP BY student_info.username, student_class_info.class_id;";
+    
+    pool.query(sql2, [], function(err2, result2) {
+      if (err2) {
+        return res.send({ error: err2 });
+      }
+      if (result2.length === 0) {
+        return res.status(404).send({ error: "No classes found." });
+      }
+
+      let finalResult = result.map((row) => {
+        return { ...row, students_instantiated: 0 };
+      });
+
+      res.send({ message: finalResult });
+    })
+  })
+}
+
 exports.get_classes = (req, res) => {
   const professorID = req.body.professorID;
   if (!professorID) {
@@ -461,7 +494,7 @@ exports.get_notifications = (req, res) => {
 
   pool.query(query, values, function (err, result) {
     if (err) {
-      res.send({ error: err });
+      return res.send({ error: err });
     }
 
     return res.send({ message: result });
