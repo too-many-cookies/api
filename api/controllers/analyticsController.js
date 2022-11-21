@@ -208,11 +208,10 @@ exports.get_students_by_class = (req, res) => {
 
 exports.get_class = (req, res) => {
   const classID = req.params.classID;
-  const professorID = req.body.professorID;
   const sql =
-    "SELECT class_info.class_id, class_info.name, class_info.class_code, class_info.class_section_number FROM class_info JOIN professor_class_instance USING(class_id) WHERE professor_class_instance.professor_id = ? AND professor_class_instance.active = 'A'  AND class_info.class_id = ? LIMIT 0, 1;";
+    "SELECT class_info.class_id, class_info.name, class_info.class_code, class_info.class_section_number FROM class_info JOIN professor_class_instance USING(class_id) WHERE professor_class_instance.active = 'A'  AND class_info.class_id = ? LIMIT 0, 1;";
 
-  pool.query(sql, [professorID, classID], function (err, result) {
+  pool.query(sql, [classID], function (err, result) {
     if (err) {
       return res.send({ error: err });
     }
