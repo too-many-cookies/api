@@ -486,7 +486,7 @@ exports.get_notifications = (req, res) => {
   JOIN professor_class_instance USING (class_id)
   WHERE professor_id = ?
   GROUP BY signin_alerts.username, signin_alerts.date, signin_alerts.failed_count, signin_alerts.read_flag
-  ORDER BY signin_alerts.date;
+  ORDER BY signin_alerts.date desc;
   `;
 
   const values = [req.body.professorID];
